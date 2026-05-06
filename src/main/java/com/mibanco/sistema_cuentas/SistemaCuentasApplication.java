@@ -1,0 +1,13 @@
+package com.mibanco.sistema_cuentas;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class SistemaCuentasApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(SistemaCuentasApplication.class, args);
+	}
+
+}
