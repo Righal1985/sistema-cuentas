@@ -92,6 +92,17 @@ public class ProductoController {
         // Usamos el método que acabamos de definir en el repositorio
         return productoRepository.findByStockLessThan(5);
     }
+    @PutMapping("/productos/descuento")
+    public String aplicarDescuento(@RequestParam String cat, @RequestParam Double porc) {
+        // Guardamos cuántos productos se actualizaron
+        int filasActualizadas = productoRepository.aplicarDescuentoPorCategoria(cat, porc);
+
+        if (filasActualizadas == 0) {
+            return "Advertencia: No se encontraron productos en la categoría '" + cat + "'. Revisa las mayúsculas.";
+        }
+
+        return "¡Éxito! Se actualizó el precio de " + filasActualizadas + " productos de la categoría " + cat;
+    }
 
 
 }
