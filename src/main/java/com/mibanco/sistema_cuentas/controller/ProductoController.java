@@ -87,6 +87,11 @@ public class ProductoController {
                 "Total a pagar: $" + totalVenta + "\n" +
                 "Stock restante: " + producto.getStock();
     }
+    @GetMapping("/productos/reporte-stock")
+    public List<Producto> obtenerReporteBajoStock() {
+        // Usamos el método que acabamos de definir en el repositorio
+        return productoRepository.findByStockLessThan(5);
+    }
 
 
 }
