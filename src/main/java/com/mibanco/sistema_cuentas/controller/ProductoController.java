@@ -2,10 +2,13 @@ package com.mibanco.sistema_cuentas.controller;
 import com.mibanco.sistema_cuentas.model.Cuenta;
 import com.mibanco.sistema_cuentas.model.Producto;
 import com.mibanco.sistema_cuentas.model.TransferenciaDTO;
+import com.mibanco.sistema_cuentas.model.Venta;
 import com.mibanco.sistema_cuentas.repository.ProductoRepository;
+import com.mibanco.sistema_cuentas.repository.VentaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -13,6 +16,8 @@ import java.util.List;
 public class ProductoController {
     @Autowired
     private ProductoRepository productoRepository;
+    @Autowired
+    private VentaRepository ventaRepository;
 
     @GetMapping("/productos")
     public List<Producto> obtenertodas() {
@@ -61,32 +66,40 @@ public class ProductoController {
 
     @PostMapping("/productos/{id}/vender")
     public String venderProducto(@PathVariable Long id, @RequestBody Integer cantidad) {
-        // 1. Buscamos el producto
+        // 1. Buscamos el producto en la DB
         Producto producto = productoRepository.findById(id).orElse(null);
 
         if (producto == null) {
             return "Error: Producto no encontrado.";
         }
 
-        // 2. Verificamos si hay suficiente stock
+        // 2. Verificamos stock
         if (producto.getStock() < cantidad) {
-            return "Stock insuficiente. Solo quedan " + producto.getStock() + " unidades.";
+            return "Stock insuficiente. Solo quedan " + producto.getStock();
         }
 
-        // 3. Calculamos el total (Lógica de Negocio)
+        // 3. Calculamos el total
         Double totalVenta = producto.getPrecio() * cantidad;
 
-        // 4. Restamos el stock y guardamos
+        // 4. RESTAMOS STOCK Y GUARDAMOS EL PRODUCTO
         producto.setStock(producto.getStock() - cantidad);
         productoRepository.save(producto);
 
-        // 5. Retornamos un "recibo" al usuario
-        return "--- TICKET DE VENTA ---\n" +
+        // 5. REGISTRAMOS LA VENTA EN LA NUEVA TABLA
+        Venta nuevaVenta = new Venta(
+                producto.getNombre(),
+                cantidad,
+                totalVenta,
+                LocalDateTime.now()
+        );
+        ventaRepository.save(nuevaVenta); // <--- Aquí usas el repositorio nuevo
+
+        return "--- VENTA EXITOSA ---\n" +
+                "ID Boleta: " + nuevaVenta.getId() + "\n" +
                 "Producto: " + producto.getNombre() + "\n" +
-                "Cantidad: " + cantidad + "\n" +
-                "Total a pagar: $" + totalVenta + "\n" +
-                "Stock restante: " + producto.getStock();
-    }
+                "Total: $" + totalVenta;
+
+        }
     @GetMapping("/productos/reporte-stock")
     public List<Producto> obtenerReporteBajoStock() {
         // Usamos el método que acabamos de definir en el repositorio
@@ -102,6 +115,10 @@ public class ProductoController {
         }
 
         return "¡Éxito! Se actualizó el precio de " + filasActualizadas + " productos de la categoría " + cat;
+    }
+    @GetMapping("/productos/ventas")
+    public List<Venta> obtenerVentas() {
+        return ventaRepository.findAll();
     }
 
 
