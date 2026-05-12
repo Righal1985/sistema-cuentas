@@ -96,6 +96,12 @@ public class ProductoController {
         );
         ventaRepository.save(nuevaVenta);
 
+        if (producto.getStock() < 5) {
+            // Si el stock es bajo, enviamos una respuesta personalizada
+            return ResponseEntity.ok("VENTA EXITOSA. ¡ALERTA! Stock crítico para " +
+                    producto.getNombre() + ": solo quedan " + producto.getStock());
+        }
+
         // 6. DEVOLVEMOS LA VENTA COMPLETA (Spring la convierte automáticamente a JSON)
         return ResponseEntity.ok(nuevaVenta);
     }
@@ -130,6 +136,35 @@ public class ProductoController {
                 "Total de Ventas Realizadas: " + cantidadVentas + "\n" +
                 "Recaudación Total: $" + granTotal;
     }
+    @DeleteMapping("/ventas/{id}/anular")
+    public ResponseEntity<String> anularVenta(@PathVariable Long id) {
+        // 1. Buscar la venta
+        Venta venta = ventaRepository.findById(id).orElse(null);
+        if (venta == null) {
+            return ResponseEntity.status(404).body("Error: La venta con ID " + id + " no existe.");
+        }
 
+        // 2. Buscar el producto por nombre (para devolver el stock)
+        // Usamos el nombre que guardamos en la venta
+        Producto producto = productoRepository.findAll().stream()
+                .filter(p -> p.getNombre().equals(venta.getProductoNombre()))
+                .findFirst()
+                .orElse(null);
+
+        if (producto != null) {
+            // Restauramos el stock
+            producto.setStock(producto.getStock() + venta.getCantidad());
+            productoRepository.save(producto);
+        }
+
+        // 3. Eliminar la venta de la base de datos
+        ventaRepository.delete(venta);
+
+        return ResponseEntity.ok("Venta ID " + id + " anulada exitosamente. Stock restaurado.");
+    }
+    @GetMapping("/ventas")
+    public List<Venta> listarVentas() {
+        return ventaRepository.findAll();
+    }
 
 }
