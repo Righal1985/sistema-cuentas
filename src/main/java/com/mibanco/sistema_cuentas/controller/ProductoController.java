@@ -6,6 +6,7 @@ import com.mibanco.sistema_cuentas.model.Venta;
 import com.mibanco.sistema_cuentas.repository.ProductoRepository;
 import com.mibanco.sistema_cuentas.repository.VentaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -65,41 +66,39 @@ public class ProductoController {
     }
 
     @PostMapping("/productos/{id}/vender")
-    public String venderProducto(@PathVariable Long id, @RequestBody Integer cantidad) {
-        // 1. Buscamos el producto en la DB
+    public ResponseEntity<?> venderProducto(@PathVariable Long id, @RequestBody Integer cantidad) {
+        // 1. Buscamos el producto
         Producto producto = productoRepository.findById(id).orElse(null);
 
+        // Error: Si no existe el producto mandamos un 404
         if (producto == null) {
-            return "Error: Producto no encontrado.";
+            return ResponseEntity.status(404).body("Error: Producto no encontrado.");
         }
 
-        // 2. Verificamos stock
+        // Error: Si no hay stock mandamos un 400
         if (producto.getStock() < cantidad) {
-            return "Stock insuficiente. Solo quedan " + producto.getStock();
+            return ResponseEntity.badRequest().body("Stock insuficiente. Solo quedan " + producto.getStock());
         }
 
         // 3. Calculamos el total
         Double totalVenta = producto.getPrecio() * cantidad;
 
-        // 4. RESTAMOS STOCK Y GUARDAMOS EL PRODUCTO
+        // 4. Actualizamos stock
         producto.setStock(producto.getStock() - cantidad);
         productoRepository.save(producto);
 
-        // 5. REGISTRAMOS LA VENTA EN LA NUEVA TABLA
+        // 5. Guardamos la venta
         Venta nuevaVenta = new Venta(
                 producto.getNombre(),
                 cantidad,
                 totalVenta,
                 LocalDateTime.now()
         );
-        ventaRepository.save(nuevaVenta); // <--- Aquí usas el repositorio nuevo
+        ventaRepository.save(nuevaVenta);
 
-        return "--- VENTA EXITOSA ---\n" +
-                "ID Boleta: " + nuevaVenta.getId() + "\n" +
-                "Producto: " + producto.getNombre() + "\n" +
-                "Total: $" + totalVenta;
-
-        }
+        // 6. DEVOLVEMOS LA VENTA COMPLETA (Spring la convierte automáticamente a JSON)
+        return ResponseEntity.ok(nuevaVenta);
+    }
     @GetMapping("/productos/reporte-stock")
     public List<Producto> obtenerReporteBajoStock() {
         // Usamos el método que acabamos de definir en el repositorio
@@ -119,6 +118,17 @@ public class ProductoController {
     @GetMapping("/productos/ventas")
     public List<Venta> obtenerVentas() {
         return ventaRepository.findAll();
+    }
+    @GetMapping("/productos/reporte")
+    public String generarReporte() {
+        Double granTotal = ventaRepository.sumarTotalVentas();
+        Long cantidadVentas = ventaRepository.contarTotalVentas();
+
+        if (granTotal == null) granTotal = 0.0;
+
+        return "--- REPORTE DE GESTIÓN ---\n" +
+                "Total de Ventas Realizadas: " + cantidadVentas + "\n" +
+                "Recaudación Total: $" + granTotal;
     }
 
 
