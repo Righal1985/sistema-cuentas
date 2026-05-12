@@ -58,8 +58,16 @@ public class ProductoController {
 
         return "Stock actualizado. Ahora tienes " + producto.getStock() + " unidades de " + producto.getNombre();
     }
-    @GetMapping("/productos/buscar")
+    // BUSCADOR POR NOMBRE (El que acabamos de hacer)
+    @GetMapping("/productos/buscar/nombre")
+    public List<Producto> buscarPorNombre(@RequestParam String nombre) {
+        return productoRepository.findByNombreContainingIgnoreCase(nombre);
+    }
+
+    // BUSCADOR POR CATEGORÍA (Versión mejorada)
+    @GetMapping("/productos/buscar/categoria")
     public List<Producto> buscarPorCategoria(@RequestParam String cat) {
+        // Es mejor usar el repository que los streams para esto también
         return productoRepository.findAll().stream()
                 .filter(p -> p.getCategoria() != null && p.getCategoria().equalsIgnoreCase(cat))
                 .toList();
@@ -166,5 +174,7 @@ public class ProductoController {
     public List<Venta> listarVentas() {
         return ventaRepository.findAll();
     }
+
+
 
 }
